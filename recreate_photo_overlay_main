@@ -1,0 +1,214 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, X, Maximize2, Minimize2 } from 'lucide-react';
+
+export default function PhotoOverlayApp() {
+  const [overlayImage, setOverlayImage] = useState(null);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [opacity, setOpacity] = useState(0.6);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    startCamera();
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: 1920, height: 1080 },
+        audio: false
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      alert('Camera access denied. Please allow camera permissions.');
+      console.error('Camera error:', err);
+    }
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setOverlayImage(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const takePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const photoUrl = canvas.toDataURL('image/png');
+    setCapturedPhoto(photoUrl);
+  };
+
+  const downloadPhoto = () => {
+    if (!capturedPhoto) return;
+    
+    const link = document.createElement('a');
+    link.href = capturedPhoto;
+    link.download = `overlay-photo-${Date.now()}.png`;
+    link.click();
+  };
+
+  const retake = () => {
+    setCapturedPhoto(null);
+  };
+
+  const clearOverlay = () => {
+    setOverlayImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  if (capturedPhoto) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+        <div className="max-w-4xl w-full bg-gray-800 rounded-lg overflow-hidden">
+          <img src={capturedPhoto} alt="Captured" className="w-full" />
+          <div className="p-6 flex gap-4 justify-center">
+            <button
+              onClick={retake}
+              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Retake
+            </button>
+            <button
+              onClick={downloadPhoto}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Download Photo
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-gray-900 flex flex-col`}>
+      {!isFullscreen && (
+        <div className="bg-gray-800 border-b border-gray-700 p-4">
+          <h1 className="text-2xl font-bold text-white text-center">Photo Overlay Camera</h1>
+        </div>
+      )}
+
+      <div className="flex-1 relative overflow-hidden">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+
+        {overlayImage && (
+          <div 
+            className="absolute inset-0 pointer-events-none flex items-center justify-center"
+            style={{ opacity }}
+          >
+            <img
+              src={overlayImage}
+              alt="Overlay"
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+        )}
+
+        <canvas ref={canvasRef} className="hidden" />
+
+        <div className="absolute top-4 right-4 flex gap-2">
+          <button
+            onClick={toggleFullscreen}
+            className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          >
+            {isFullscreen ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+          </button>
+        </div>
+
+        {overlayImage && (
+          <div className="absolute top-4 left-4 bg-gray-800 bg-opacity-90 rounded-lg p-4 min-w-64">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-white font-medium text-sm">Overlay Opacity</label>
+              <button
+                onClick={clearOverlay}
+                className="p-1 hover:bg-gray-700 rounded transition-colors"
+                title="Remove overlay"
+              >
+                <X size={20} className="text-white" />
+              </button>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              className="w-full accent-blue-500"
+            />
+            <div className="text-white text-sm text-center mt-1">{Math.round(opacity * 100)}%</div>
+          </div>
+        )}
+      </div>
+
+      {!isFullscreen && (
+        <div className="bg-gray-800 border-t border-gray-700 p-6">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4 items-center justify-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors w-full sm:w-auto justify-center"
+            >
+              <Upload size={20} />
+              {overlayImage ? 'Change Overlay Photo' : 'Choose Overlay Photo'}
+            </button>
+            
+            <button
+              onClick={takePhoto}
+              disabled={!cameraStream}
+              className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors w-full sm:w-auto justify-center"
+            >
+              <Camera size={20} />
+              Take Photo
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
