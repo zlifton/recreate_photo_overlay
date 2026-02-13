@@ -56,12 +56,23 @@
             </svg>
         );
 
+        const SwitchCamera = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"></path>
+                <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="m18 22-3-3 3-3"></path>
+                <path d="m6 2 3 3-3 3"></path>
+            </svg>
+        );
+
         function PhotoOverlayApp() {
             const [overlayImage, setOverlayImage] = useState(null);
             const [cameraStream, setCameraStream] = useState(null);
             const [capturedPhoto, setCapturedPhoto] = useState(null);
             const [opacity, setOpacity] = useState(0.6);
             const [isFullscreen, setIsFullscreen] = useState(false);
+            const [facingMode, setFacingMode] = useState('environment');
             
             const videoRef = useRef(null);
             const canvasRef = useRef(null);
@@ -74,12 +85,17 @@
                         cameraStream.getTracks().forEach(track => track.stop());
                     }
                 };
-            }, []);
+            }, [facingMode]);
 
             const startCamera = async () => {
                 try {
+                    // Stop existing stream if any
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => track.stop());
+                    }
+                    
                     const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: 'environment', width: 1920, height: 1080 },
+                        video: { facingMode: facingMode, width: 1920, height: 1080 },
                         audio: false
                     });
                     setCameraStream(stream);
@@ -143,6 +159,10 @@
                 setIsFullscreen(!isFullscreen);
             };
 
+            const switchCamera = () => {
+                setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+            };
+
             if (capturedPhoto) {
                 return (
                     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
@@ -200,6 +220,13 @@
                         <canvas ref={canvasRef} className="hidden" />
 
                         <div className="absolute top-4 right-4 flex gap-2">
+                            <button
+                                onClick={switchCamera}
+                                className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
+                                title="Switch camera"
+                            >
+                                <SwitchCamera />
+                            </button>
                             <button
                                 onClick={toggleFullscreen}
                                 className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
