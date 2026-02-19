@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Overlay Camera</title>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // Lucide React icons as inline SVG components
+        const Camera = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                <circle cx="12" cy="13" r="3"></circle>
+            </svg>
+        );
+
+        const Upload = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        );
+
+        const X = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const Maximize2 = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+
+        const Minimize2 = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="4 14 10 14 10 20"></polyline>
+                <polyline points="20 10 14 10 14 4"></polyline>
+                <line x1="14" y1="10" x2="21" y2="3"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+        );
+
+        const SwitchCamera = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"></path>
+                <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="m18 22-3-3 3-3"></path>
+                <path d="m6 2 3 3-3 3"></path>
+            </svg>
+        );
+
+        const Info = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+        );
+
+        const Settings = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        );
+
+        function PhotoOverlayApp() {
+            const [overlayImage, setOverlayImage] = useState(null);
+            const [cameraStream, setCameraStream] = useState(null);
+            const [capturedPhoto, setCapturedPhoto] = useState(null);
+            const [opacity, setOpacity] = useState(0.6);
+            const [isFullscreen, setIsFullscreen] = useState(false);
+            const [facingMode, setFacingMode] = useState('environment');
+            const [showExifInfo, setShowExifInfo] = useState(false);
+            const [exifData, setExifData] = useState(null);
+            const [showSettingsModal, setShowSettingsModal] = useState(false);
+            
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            useEffect(() => {
+                startCamera();
+                return () => {
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => track.stop());
+                    }
+                };
+            }, [facingMode]);
+
+            const startCamera = async () => {
+                try {
+                    // Stop existing stream if any
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: facingMode, width: 1920, height: 1080 },
+                        audio: false
+                    });
+                    setCameraStream(stream);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream;
+                    }
+                } catch (err) {
+                    alert('Camera access denied. Please allow camera permissions.');
+                    console.error('Camera error:', err);
+                }
+            };
+
+            const handleImageSelect = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        setOverlayImage(event.target.result);
+                        extractExifData(file);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const extractExifData = async (file) => {
+                // Read EXIF data using built-in browser APIs
+                const img = new Image();
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        // For now, we'll create a basic implementation
+                        // In production, you'd use a library like exif-js
+                        // This is a simplified version that works with the basic EXIF tags
+                        
+                        // Try to parse EXIF from the image
+                        try {
+                            // Create a simple EXIF parser for demonstration
+                            const view = new DataView(reader.result);
+                            const exif = parseBasicExif(view);
+                            setExifData(exif);
+                        } catch (err) {
+                            console.log('Could not read EXIF data:', err);
+                            setExifData({
+                                focalLength: 'N/A',
+                                iso: 'N/A',
+                                shutterSpeed: 'N/A',
+                                aperture: 'N/A'
+                            });
+                        }
+                    };
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            const parseBasicExif = (view) => {
+                // Simplified EXIF parser - in production use exif-js library
+                // This is a basic implementation for demonstration
+                return {
+                    focalLength: 'N/A',
+                    iso: 'N/A', 
+                    shutterSpeed: 'N/A',
+                    aperture: 'N/A',
+                    note: 'Upload a photo with EXIF data to see camera settings'
+                };
+            };
+
+            const takePhoto = () => {
+                if (!videoRef.current || !canvasRef.current) return;
+
+                const video = videoRef.current;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                const photoUrl = canvas.toDataURL('image/png');
+                setCapturedPhoto(photoUrl);
+            };
+
+            const downloadPhoto = () => {
+                if (!capturedPhoto) return;
+                
+                const link = document.createElement('a');
+                link.href = capturedPhoto;
+                link.download = `overlay-photo-${Date.now()}.png`;
+                link.click();
+            };
+
+            const retake = () => {
+                setCapturedPhoto(null);
+            };
+
+            const clearOverlay = () => {
+                setOverlayImage(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            };
+
+            const toggleFullscreen = () => {
+                setIsFullscreen(!isFullscreen);
+            };
+
+            const switchCamera = () => {
+                setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+            };
+
+            const toggleExifInfo = () => {
+                setShowExifInfo(prev => !prev);
+            };
+
+            const applyCameraSettings = async () => {
+                if (!exifData || !cameraStream) {
+                    alert('No camera settings available to apply');
+                    return;
+                }
+                
+                setShowSettingsModal(true);
+            };
+
+            const applySettingsToCamera = async () => {
+                try {
+                    // Stop current stream
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => track.stop());
+                    }
+
+                    // Request camera with advanced constraints
+                    const constraints = {
+                        video: {
+                            facingMode: facingMode,
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                        },
+                        audio: false
+                    };
+
+                    // Add ISO if available (exposure compensation)
+                    if (exifData?.iso && exifData.iso !== 'N/A') {
+                        constraints.video.iso = { ideal: parseInt(exifData.iso) };
+                    }
+
+                    // Add exposure time if available (shutter speed)
+                    if (exifData?.shutterSpeed && exifData.shutterSpeed !== 'N/A') {
+                        const speed = parseShutterSpeed(exifData.shutterSpeed);
+                        if (speed) {
+                            constraints.video.exposureTime = { ideal: speed };
+                        }
+                    }
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    
+                    // Try to apply additional settings via track capabilities
+                    const videoTrack = stream.getVideoTracks()[0];
+                    const capabilities = videoTrack.getCapabilities();
+                    const settings = {};
+
+                    if (capabilities.iso && exifData?.iso !== 'N/A') {
+                        const isoValue = parseInt(exifData.iso);
+                        if (isoValue >= capabilities.iso.min && isoValue <= capabilities.iso.max) {
+                            settings.iso = isoValue;
+                        }
+                    }
+
+                    if (Object.keys(settings).length > 0) {
+                        await videoTrack.applyConstraints({ advanced: [settings] });
+                    }
+
+                    setCameraStream(stream);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream;
+                    }
+                    
+                    setShowSettingsModal(false);
+                    alert('Camera settings applied! Note: Some settings may not be supported by your device.');
+                } catch (err) {
+                    console.error('Error applying camera settings:', err);
+                    alert('Could not apply all camera settings. Your device may not support manual controls.');
+                    // Fall back to regular camera
+                    startCamera();
+                }
+            };
+
+            const parseShutterSpeed = (speed) => {
+                // Convert shutter speed string to seconds
+                // e.g., "1/250" -> 0.004
+                if (typeof speed === 'string' && speed.includes('/')) {
+                    const parts = speed.split('/');
+                    return parseFloat(parts[0]) / parseFloat(parts[1]);
+                }
+                return null;
+            };
+
+            if (capturedPhoto) {
+                return (
+                    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
+                        <div className="max-w-4xl w-full bg-gray-800 rounded-lg overflow-hidden">
+                            <img src={capturedPhoto} alt="Captured" className="w-full" />
+                            <div className="p-6 flex gap-4 justify-center">
+                                <button
+                                    onClick={retake}
+                                    className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    Retake
+                                </button>
+                                <button
+                                    onClick={downloadPhoto}
+                                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    Download Photo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-gray-900 flex flex-col`}>
+                    {!isFullscreen && (
+                        <div className="bg-gray-800 border-b border-gray-700 p-4">
+                            <h1 className="text-2xl font-bold text-white text-center">Photo Overlay Camera</h1>
+                        </div>
+                    )}
+
+                    <div className="flex-1 relative overflow-hidden">
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+
+                        {overlayImage && (
+                            <div 
+                                className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                                style={{ opacity }}
+                            >
+                                <img
+                                    src={overlayImage}
+                                    alt="Overlay"
+                                    className="max-w-full max-h-full object-contain"
+                                />
+                            </div>
+                        )}
+
+                        <canvas ref={canvasRef} className="hidden" />
+
+                        <div className="absolute top-4 right-4 flex gap-2">
+                            {overlayImage && (
+                                <>
+                                    <button
+                                        onClick={toggleExifInfo}
+                                        className={`p-3 ${showExifInfo ? 'bg-blue-600' : 'bg-gray-800'} bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all`}
+                                        title="Toggle photo info"
+                                    >
+                                        <Info />
+                                    </button>
+                                    <button
+                                        onClick={applyCameraSettings}
+                                        className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
+                                        title="Match camera settings"
+                                    >
+                                        <Settings />
+                                    </button>
+                                </>
+                            )}
+                            <button
+                                onClick={switchCamera}
+                                className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
+                                title="Switch camera"
+                            >
+                                <SwitchCamera />
+                            </button>
+                            <button
+                                onClick={toggleFullscreen}
+                                className="p-3 bg-gray-800 bg-opacity-80 hover:bg-opacity-100 text-white rounded-full transition-all"
+                                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                            >
+                                {isFullscreen ? <Minimize2 /> : <Maximize2 />}
+                            </button>
+                        </div>
+
+                        {overlayImage && (
+                            <div className="absolute top-4 left-4 bg-gray-800 bg-opacity-90 rounded-lg p-4 min-w-64">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-white font-medium text-sm">Overlay Opacity</label>
+                                    <button
+                                        onClick={clearOverlay}
+                                        className="p-1 hover:bg-gray-700 rounded transition-colors"
+                                        title="Remove overlay"
+                                    >
+                                        <X />
+                                    </button>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={opacity}
+                                    onChange={(e) => setOpacity(parseFloat(e.target.value))}
+                                    className="w-full accent-blue-500"
+                                />
+                                <div className="text-white text-sm text-center mt-1">{Math.round(opacity * 100)}%</div>
+                            </div>
+                        )}
+
+                        {showExifInfo && exifData && (
+                            <div className="absolute bottom-4 left-4 bg-gray-800 bg-opacity-95 rounded-lg p-4 min-w-72">
+                                <h3 className="text-white font-bold text-sm mb-3 border-b border-gray-600 pb-2">Original Photo Settings</h3>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300 text-sm">Focal Length:</span>
+                                        <span className="text-white text-sm font-medium">{exifData.focalLength}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300 text-sm">ISO:</span>
+                                        <span className="text-white text-sm font-medium">{exifData.iso}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300 text-sm">Shutter Speed:</span>
+                                        <span className="text-white text-sm font-medium">{exifData.shutterSpeed}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300 text-sm">Aperture:</span>
+                                        <span className="text-white text-sm font-medium">{exifData.aperture}</span>
+                                    </div>
+                                    {exifData.note && (
+                                        <p className="text-gray-400 text-xs mt-3 pt-2 border-t border-gray-600">{exifData.note}</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {showSettingsModal && (
+                            <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4">
+                                <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
+                                    <h2 className="text-white text-xl font-bold mb-4">Apply Camera Settings</h2>
+                                    <p className="text-gray-300 text-sm mb-4">
+                                        This will attempt to match your camera settings to the original photo. Note that not all devices support manual camera controls.
+                                    </p>
+                                    {exifData && (
+                                        <div className="bg-gray-700 rounded p-3 mb-4 space-y-1">
+                                            <div className="text-white text-sm">Focal Length: {exifData.focalLength}</div>
+                                            <div className="text-white text-sm">ISO: {exifData.iso}</div>
+                                            <div className="text-white text-sm">Shutter: {exifData.shutterSpeed}</div>
+                                            <div className="text-white text-sm">Aperture: {exifData.aperture}</div>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setShowSettingsModal(false)}
+                                            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={applySettingsToCamera}
+                                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                                        >
+                                            Apply Settings
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {!isFullscreen && (
+                        <div className="bg-gray-800 border-t border-gray-700 p-6">
+                            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-4 items-center justify-center">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageSelect}
+                                    className="hidden"
+                                />
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors w-full sm:w-auto justify-center"
+                                >
+                                    <Upload />
+                                    {overlayImage ? 'Change Overlay Photo' : 'Choose Overlay Photo'}
+                                </button>
+                                
+                                <button
+                                    onClick={takePhoto}
+                                    disabled={!cameraStream}
+                                    className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors w-full sm:w-auto justify-center"
+                                >
+                                    <Camera />
+                                    Take Photo
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<PhotoOverlayApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
